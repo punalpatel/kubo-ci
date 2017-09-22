@@ -127,7 +127,7 @@ resources:
   type: gcs
   source:
     json_key: ((gcs-json-key))
-    bucket: kubo-public
+    bucket: kubo-pipeline-store
     versioned_file: kubo-release-latest.tgz
 
 - name: gcs-kubo-deployment-tarball

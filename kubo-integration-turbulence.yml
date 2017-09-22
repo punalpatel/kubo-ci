@@ -57,6 +57,13 @@ resources:
   type: gcs
   source:
     json_key: ((gcs-json-key))
+    bucket: kubo-pipeline-store
+    versioned_file: kubo-release-latest.tgz
+
+- name: gcs-kubo-release-post
+  type: gcs
+  source:
+    json_key: ((gcs-json-key))
     bucket: kubo-public
     versioned_file: kubo-release-latest.tgz
 
@@ -64,8 +71,22 @@ resources:
   type: gcs
   source:
     json_key: ((gcs-json-key))
+    bucket: kubo-pipeline-store
+    versioned_file: kubo-deployment-latest.tgz
+
+- name: gcs-kubo-deployment-post
+  type: gcs
+  source:
+    json_key: ((gcs-json-key))
     bucket: kubo-public
     versioned_file: kubo-deployment-latest.tgz
+
+- name: after-midnight
+  type: time
+  source:
+    start: 12:00 AM
+    stop: 1:00 AM
+    location: America/Chicago
 
 ############################################
 # Jobs
@@ -77,9 +98,10 @@ jobs:
 - name: claim-lock-<%= iaas %>-<%= network %>
   plan:
   - aggregate:
+    - get: after-midnight
+      trigger: true
     - get: git-kubo-ci
     - get: gcs-kubo-release-pre
-      trigger: true
     - get: gcs-kubo-deployment-pre
   - put: kubo-lock-<%= iaas %>-<%= network %>
     params: { acquire: true }
@@ -261,5 +283,28 @@ jobs:
 
   - put: kubo-lock-<%= iaas %>-<%= network %>
     params: { release: kubo-lock-<%= iaas %>-<%= network %> }
+
 <% end %>
 <% end %>
+
+- name: upload-kubo-deployment
+  plan:
+  - aggregate:
+    - get: git-kubo-ci
+    - get: gcs-kubo-deployment-pre
+      passed: <%= iaas_config.flat_map { |iaas, network_list| network_list.map { |network| "destroy-bosh-#{iaas}-#{network}" } } %>
+  - aggregate:
+    - put: gcs-kubo-deployment-post
+      params:
+        file: gcs-kubo-deployment-pre/kubo-deployment-*.tgz
+
+- name: upload-kubo-release
+  plan:
+  - aggregate:
+    - get: gcs-kubo-release-pre
+      passed: <%= iaas_config.flat_map { |iaas, network_list| network_list.map { |network| "destroy-bosh-#{iaas}-#{network}" } } %>
+  - aggregate:
+    - put: gcs-kubo-release-post
+      params:
+        file: gcs-kubo-release-pre/kubo-*.tgz
+
