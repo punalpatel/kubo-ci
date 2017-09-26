@@ -1,0 +1,19 @@
+#!/bin/bash
+
+PEER_PORT=2381
+CLIENT_PORT=9001
+docker run \
+  -d -p $PEER_PORT:$PEER_PORT \
+  -p $CLIENT_PORT:$CLIENT_PORT \
+  -e ETCD_NAME=etcd3 \
+  -e ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster \
+  -e ETCD_ADVERTISE_CLIENT_URLS=http://localhost:$CLIENT_PORT \
+  -e ETCD_LISTEN_PEER_URLS=http://0.0.0.0:$PEER_PORT \
+  -e ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:$CLIENT_PORT \
+  -e ETCD_INITIAL_CLUSTER_STATE=existing \
+  -e ETCD_INITIAL_CLUSTER=etcd1=http://localhost:2379,etcd2=http://localhost:2380,etcd3=http://localhost:$PEER_PORT \
+  --network host \
+  --name etcd3 \
+  -v /Users/pivotal/workspace/kubo-ci/docker-images/foo/etcd3.data:/etcd3.etcd:rw \
+  gcr.io/google_containers/etcd:3.0.3 \
+  /usr/local/bin/etcd

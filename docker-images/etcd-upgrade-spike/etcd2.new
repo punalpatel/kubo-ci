@@ -1,0 +1,19 @@
+#!/bin/bash
+
+PEER_PORT=2380
+CLIENT_PORT=7001
+docker run \
+  -d -p $PEER_PORT:$PEER_PORT \
+  -p $CLIENT_PORT:$CLIENT_PORT \
+  -e ETCD_NAME=etcd2 \
+  -e ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster \
+  -e ETCD_ADVERTISE_CLIENT_URLS=http://localhost:$CLIENT_PORT \
+  -e ETCD_LISTEN_PEER_URLS=http://0.0.0.0:$PEER_PORT \
+  -e ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:$CLIENT_PORT \
+  -e ETCD_INITIAL_CLUSTER_STATE=existing \
+  -e ETCD_INITIAL_CLUSTER=etcd1=http://localhost:2379,etcd2=http://localhost:$PEER_PORT \
+  --network host \
+  --name etcd2 \
+  -v /Users/pivotal/workspace/kubo-ci/docker-images/foo/etcd2.data:/etcd2.etcd:rw \
+  etcd:3.2.7 \
+  /usr/local/bin/etcd

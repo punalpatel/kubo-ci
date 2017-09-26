@@ -1,0 +1,3 @@
+docker stop etcd1 etcd2 etcd3
+docker rm etcd1 etcd2 etcd3
+rm -rf etcd1.data etcd2.data etcd3.data
