@@ -1,0 +1,105 @@
+---
+resource_types:
+- name: gcs
+  type: docker-image
+  source:
+    repository: frodenas/gcs-resource
+
+resources:
+- name: git-kubo-ci
+  type: git
+  source:
+    uri: https://github.com/pivotal-cf-experimental/kubo-ci
+    branch: upgrade-from-170
+
+- name: git-kubo-deployment
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry-incubator/kubo-deployment
+    branch: master
+
+- name: ghr-kubo-deployment
+  type: github-release
+  source:
+    owner: cloudfoundry-incubator
+    repository: kubo-deployment
+
+- name: ghr-kubo-release
+  type: github-release
+  source:
+    owner: cloudfoundry-incubator
+    repository: kubo-release
+
+- name: gcs-bosh-state
+  type: gcs
+  source:
+    json_key: ((gcs-json-key))
+    bucket: kubo-pipeline-store
+    versioned_file: bosh/state.json
+
+- name: gcs-bosh-creds
+  type: gcs
+  source:
+    json_key: ((gcs-json-key))
+    bucket: kubo-pipeline-store
+    versioned_file: bosh/creds.yml
+
+- name: kubo-lock-gcp
+  type: pool
+  source:
+    uri: git@github.com:pivotal-cf-experimental/kubo-locks.git
+    branch: master
+    private_key: ((git-ssh-key))
+    pool: kubo-gcp
+
+jobs:
+- name: claim-lock-gcp
+  max_in_flight: 1
+  plan:
+  - put: kubo-lock-gcp
+    params:
+      acquire: true
+
+- name: install-bosh
+  plan:
+  - aggregate:
+    - get: kubo-lock-gcp
+      passed: [ 'claim-lock-gcp' ]
+      trigger: true
+      version: every
+    - get: ghr-kubo-deployment
+      version:
+        tag: v0.6.0
+    - get: git-kubo-ci
+  - task: install
+    tags: [ 'gcp' ]
+    file: git-kubo-ci/tasks/install-bosh-from-release.yml
+  - aggregate:
+    - put: gcs-bosh-creds
+      params:
+        file: bosh-creds/creds.yml
+    - put: gcs-bosh-state
+      params:
+        file: bosh-state/state.json
+
+- name: destroy-bosh-gcp
+  plan:
+  - aggregate:
+    - get: git-kubo-ci
+    - get: git-kubo-deployment
+    - get: kubo-lock-gcp
+      version: every
+      trigger: true
+      passed: [ 'install-bosh-gcp' ]
+    - get: gcs-bosh-state
+      passed: [ 'install-bosh-gcp' ]
+    - get: gcs-bosh-creds
+      passed: [ 'install-bosh-gcp' ]
+  - task: destroy
+    tags: [ 'gcp' ]
+    file: git-kubo-ci/tasks/destroy-bosh.yml
+    input_mapping:
+      kubo-lock: kubo-lock-gcp
+  - put: kubo-lock-gcp
+    params:
+      release: kubo-lock-gcp
