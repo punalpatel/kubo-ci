@@ -1,7 +1,8 @@
 package generic_test
 
 import (
-	"tests/test_helpers"
+	"tests/config"
+	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -9,15 +10,22 @@ import (
 
 var _ = Describe("API Versions", func() {
 	var (
-		runner *test_helpers.KubectlRunner
+		kubectl    *KubectlRunner
+		testconfig *config.Config
+		err        error
 	)
 
+	BeforeSuite(func() {
+		testconfig, err = config.InitConfig()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	BeforeEach(func() {
-		runner = test_helpers.NewKubectlRunner()
+		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 	})
 
 	It("has RBAC enabled", func() {
-		lines := runner.GetOutput("api-versions")
+		lines := kubectl.GetOutput("api-versions")
 
 		Expect(lines).To(ContainElement(MatchRegexp("^rbac.*")))
 	})

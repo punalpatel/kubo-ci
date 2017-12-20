@@ -3,10 +3,10 @@ package cloudfoundry_test
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
-	"tests/test_helpers"
+	"tests/config"
+	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,36 +16,44 @@ import (
 var _ = Describe("Deploy workload", func() {
 
 	var (
-		tcpPort   string
-		nginxSpec = test_helpers.PathFromRoot("specs/nginx.yml")
-		runner    *test_helpers.KubectlRunner
+		tcpPort    string
+		nginxSpec  = PathFromRoot("specs/nginx.yml")
+		kubectl    *KubectlRunner
+		testconfig *config.Config
+		err        error
 	)
 
+	BeforeSuite(func() {
+		testconfig, err = config.InitConfig()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	BeforeEach(func() {
-		tcpPort = os.Getenv("WORKLOAD_TCP_PORT")
-		if tcpPort == "" {
-			Fail("Correct WORKLOAD_TCP_PORT has to be set")
+		if testconfig.Kubernetes.MasterPort == 0 {
+			Fail("Please ensure k8s master port is defined in the test config")
 		}
 
-		runner = test_helpers.NewKubectlRunner()
-		runner.RunKubectlCommand(
-			"create", "namespace", runner.Namespace()).Wait("60s")
+		tcpPort = string(testconfig.Kubernetes.MasterPort + 10)
 
-		Eventually(runner.RunKubectlCommand(
+		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
+		kubectl.RunKubectlCommand(
+			"create", "namespace", kubectl.Namespace()).Wait("60s")
+
+		Eventually(kubectl.RunKubectlCommand(
 			"create", "-f", nginxSpec), "60s").Should(gexec.Exit(0))
 	})
 
 	AfterEach(func() {
-		Eventually(runner.RunKubectlCommand(
+		Eventually(kubectl.RunKubectlCommand(
 			"delete", "-f", nginxSpec), "60s").Should(gexec.Exit())
 
-		runner.RunKubectlCommand(
-			"delete", "namespace", runner.Namespace()).Wait("60s")
+		kubectl.RunKubectlCommand(
+			"delete", "namespace", kubectl.Namespace()).Wait("60s")
 	})
 
 	It("exposes routes via CF routers", func() {
-		serviceName := runner.Namespace()
-		appUrl := fmt.Sprintf("http://%s.%s", serviceName, appsDomain)
+		serviceName := kubectl.Namespace()
+		appUrl := fmt.Sprintf("http://%s.%s", serviceName, testconfig.Cf.AppsDomain)
 		httpClient := http.Client{
 			Timeout: time.Duration(5 * time.Second),
 		}
@@ -56,7 +64,7 @@ var _ = Describe("Deploy workload", func() {
 		Expect(result.StatusCode).To(Equal(404))
 
 		httpLabel := fmt.Sprintf("http-route-sync=%s", serviceName)
-		Eventually(runner.RunKubectlCommand("label", "services", "nginx", httpLabel), "10s").Should(gexec.Exit(0))
+		Eventually(kubectl.RunKubectlCommand("label", "services", "nginx", httpLabel), "10s").Should(gexec.Exit(0))
 
 		Eventually(func() int {
 			result, err := httpClient.Get(appUrl)
@@ -68,13 +76,13 @@ var _ = Describe("Deploy workload", func() {
 		}, "120s", "5s").Should(Equal(200))
 
 		By("exposing it via TCP")
-		appUrl = fmt.Sprintf("http://%s:%s", tcpRouterDNSName, tcpPort)
+		appUrl = fmt.Sprintf("http://%s:%s", testconfig.Kubernetes.MasterHost, testconfig.Kubernetes.MasterPort)
 
 		result, err = httpClient.Get(appUrl)
 		Expect(err).To(HaveOccurred())
 
 		tcpLabel := fmt.Sprintf("tcp-route-sync=%s", tcpPort)
-		Eventually(runner.RunKubectlCommand("label", "services", "nginx", tcpLabel), "10s").Should(gexec.Exit(0))
+		Eventually(kubectl.RunKubectlCommand("label", "services", "nginx", tcpLabel), "10s").Should(gexec.Exit(0))
 		Eventually(func() error {
 			_, err := httpClient.Get(appUrl)
 			return err
