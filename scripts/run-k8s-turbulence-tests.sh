@@ -29,9 +29,9 @@ generate_testconfig() {
 main() {
   setup_env_dir
   set_kubeconfig
-  generate_testconfig > testconfig.json
+  generate_testconfig > "$PWD"/testconfig.json
 
-  export CONFIG=testconfig.json
+  export CONFIG="$PWD"/testconfig.json
 
   ginkgo -progress -v "$GOPATH/src/tests/turbulence-tests/worker_failure"
   ginkgo -progress -v "$GOPATH/src/tests/turbulence-tests/master_failure"
