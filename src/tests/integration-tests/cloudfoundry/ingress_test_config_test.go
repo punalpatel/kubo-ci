@@ -2,6 +2,7 @@ package cloudfoundry_test
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"tests/config"
 	"tests/test_helpers"
@@ -38,12 +39,12 @@ func InitializeIngressTestConfig(runner *test_helpers.KubectlRunner, testconfig 
 	tc.rbacServiceAccount = "nginx-ingress-serviceaccount"
 	tc.runner = runner
 
-	tc.tcpPort = string(testconfig.MasterPort + 20)
+	tc.tcpPort = strconv.Itoa(testconfig.MasterPort + 20)
 	tc.kubernetesServiceHost = testconfig.MasterHost
 	if tc.kubernetesServiceHost == "" {
 		Fail("Correct Kubernetes Master Host must be set in test config")
 	}
-	tc.kubernetesServicePort = string(testconfig.MasterPort)
+	tc.kubernetesServicePort = strconv.Itoa(testconfig.MasterPort)
 	if tc.kubernetesServicePort == "" {
 		Fail("Correct Kubernetes Master Port must be set in test config")
 	}
