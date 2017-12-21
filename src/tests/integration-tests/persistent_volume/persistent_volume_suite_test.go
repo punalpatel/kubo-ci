@@ -12,6 +12,7 @@ import (
 
 var iaas string
 var deploymentName string
+var testconfig *config.Config
 
 func TestPersistentVolume(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -19,7 +20,8 @@ func TestPersistentVolume(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testconfig, err := config.InitConfig()
+	var err error
+	testconfig, err = config.InitConfig()
 	Expect(err).NotTo(HaveOccurred())
 
 	platforms := []string{"aws", "gcp", "vsphere"}

@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"tests/config"
 	. "tests/test_helpers"
 
 	"github.com/onsi/gomega/gexec"
@@ -20,25 +19,18 @@ var _ = Describe("Guestbook storage", func() {
 	var (
 		deployment director.Deployment
 		kubectl    *KubectlRunner
-		testconfig *config.Config
 	)
-
-	BeforeSuite(func() {
-		var err error
-		testconfig, err = config.InitConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
 
 	BeforeEach(func() {
 		var err error
 		director := NewDirector(testconfig.Bosh)
-		deployment, err = director.FindDeployment(deploymentName)
+		deployment, err = director.FindDeployment(testconfig.Bosh.Deployment)
 		Expect(err).NotTo(HaveOccurred())
 
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 		kubectl.CreateNamespace()
 
-		storageClassSpec := PathFromRoot(fmt.Sprintf("specs/storage-class-%s.yml", iaas))
+		storageClassSpec := PathFromRoot(fmt.Sprintf("specs/storage-class-%s.yml", testconfig.Bosh.Iaas))
 		Eventually(kubectl.RunKubectlCommand("create", "-f", storageClassSpec), "60s").Should(gexec.Exit(0))
 		pvcSpec := PathFromRoot("specs/persistent-volume-claim.yml")
 		Eventually(kubectl.RunKubectlCommand("create", "-f", pvcSpec), "60s").Should(gexec.Exit(0))
@@ -49,7 +41,7 @@ var _ = Describe("Guestbook storage", func() {
 		UndeployGuestBook(kubectl)
 		pvcSpec := PathFromRoot("specs/persistent-volume-claim.yml")
 		Eventually(kubectl.RunKubectlCommand("delete", "-f", pvcSpec), "60s").Should(gexec.Exit(0))
-		storageClassSpec := PathFromRoot(fmt.Sprintf("specs/storage-class-%s.yml", iaas))
+		storageClassSpec := PathFromRoot(fmt.Sprintf("specs/storage-class-%s.yml", testconfig.Bosh.Iaas))
 		Eventually(kubectl.RunKubectlCommand("delete", "-f", storageClassSpec), "60s").Should(gexec.Exit(0))
 		kubectl.RunKubectlCommand("delete", "namespace", kubectl.Namespace())
 	})

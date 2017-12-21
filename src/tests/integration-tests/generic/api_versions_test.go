@@ -1,7 +1,6 @@
 package generic_test
 
 import (
-	"tests/config"
 	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -10,15 +9,8 @@ import (
 
 var _ = Describe("API Versions", func() {
 	var (
-		kubectl    *KubectlRunner
-		testconfig *config.Config
+		kubectl *KubectlRunner
 	)
-
-	BeforeSuite(func() {
-		var err error
-		testconfig, err = config.InitConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
 
 	BeforeEach(func() {
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)

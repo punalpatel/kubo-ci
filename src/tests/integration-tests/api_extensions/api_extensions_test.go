@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"tests/config"
 	. "tests/test_helpers"
@@ -62,6 +63,9 @@ var _ = Describe("Api Extensions", func() {
 
 	BeforeSuite(func() {
 		var err error
+
+		SetDefaultEventuallyTimeout(60 * time.Second)
+
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})

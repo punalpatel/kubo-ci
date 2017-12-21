@@ -2,7 +2,6 @@ package generic_test
 
 import (
 	"fmt"
-	"tests/config"
 	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -14,15 +13,8 @@ import (
 var _ = Describe("MasterTlsCertificate", func() {
 
 	var (
-		kubectl    *KubectlRunner
-		testconfig *config.Config
+		kubectl *KubectlRunner
 	)
-
-	BeforeSuite(func() {
-		var err error
-		testconfig, err = config.InitConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
 
 	BeforeEach(func() {
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)

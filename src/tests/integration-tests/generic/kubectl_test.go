@@ -1,7 +1,6 @@
 package generic_test
 
 import (
-	"tests/config"
 	. "tests/test_helpers"
 
 	"net/http"
@@ -15,15 +14,8 @@ import (
 
 var _ = Describe("Kubectl", func() {
 	var (
-		kubectl    *KubectlRunner
-		testconfig *config.Config
-		err        error
+		kubectl *KubectlRunner
 	)
-
-	BeforeSuite(func() {
-		testconfig, err = config.InitConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
 
 	BeforeEach(func() {
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)

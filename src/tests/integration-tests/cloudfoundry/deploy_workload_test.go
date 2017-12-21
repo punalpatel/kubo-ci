@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"tests/config"
 	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -16,17 +15,10 @@ import (
 var _ = Describe("Deploy workload", func() {
 
 	var (
-		tcpPort    string
-		nginxSpec  = PathFromRoot("specs/nginx.yml")
-		kubectl    *KubectlRunner
-		testconfig *config.Config
+		tcpPort   string
+		nginxSpec = PathFromRoot("specs/nginx.yml")
+		kubectl   *KubectlRunner
 	)
-
-	BeforeSuite(func() {
-		var err error
-		testconfig, err = config.InitConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
 
 	BeforeEach(func() {
 		if testconfig.Kubernetes.MasterPort == 0 {

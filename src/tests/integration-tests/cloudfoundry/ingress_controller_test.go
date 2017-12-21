@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"tests/config"
 	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -21,14 +20,7 @@ var _ = Describe("Testing Ingress Controller", func() {
 		ingressConfig IngressTestConfig
 		kubectl       *KubectlRunner
 		hasPassed     bool
-		testconfig    *config.Config
 	)
-
-	BeforeSuite(func() {
-		var err error
-		testconfig, err = config.InitConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
 
 	BeforeEach(func() {
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
