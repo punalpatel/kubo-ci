@@ -25,7 +25,7 @@ var _ = Describe("Testing Ingress Controller", func() {
 	BeforeEach(func() {
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 		kubectl.RunKubectlCommand("create", "namespace", kubectl.Namespace()).Wait("60s")
-		ingressConfig = InitializeTestConfig(kubectl)
+		ingressConfig = InitializeIngressTestConfig(kubectl, testconfig.Kubernetes)
 
 		certFile, _ := ioutil.TempFile(os.TempDir(), "cert")
 		_, err := certFile.WriteString(ingressConfig.tlsKubernetesCert)

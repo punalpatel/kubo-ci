@@ -5,21 +5,19 @@
 set -eu
 set -o pipefail
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-. "$DIR/lib/run_test_suite.sh"
+source "$PWD/git-kubo-ci/scripts/lib/environment.sh"
 
-if [[ $# -lt 3 ]]; then
-    echo "Usage:" >&2
-    echo "$0 GIT_KUBO_DEPLOYMENT_DIR DEPLOYMENT_NAME KUBO_ENVIRONMENT_DIR" >&2
-    exit 1
-fi
+GIT_KUBO_CI=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
+export BOSH_LOG_LEVEL=debug
+export BOSH_LOG_PATH="$PWD"/bosh.log
+export GOPATH="$GIT_KUBO_CI"
+export DEPLOYMENT_NAME=${DEPLOYMENT_NAME:="ci-service"}
 
-function call_bosh {
-  BOSH_ENV="$KUBO_ENVIRONMENT_DIR" source "$GIT_KUBO_DEPLOYMENT_DIR/bin/set_bosh_environment"
-  bosh-cli "$@"
-}
+iaas=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/iaas")
+routing_mode=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/routing_mode")
+director_name=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/director_name")
 
-function credHub_login {
+credHub_login() {
     local director_name credhub_user_password credhub_api_url
     director_name=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/director_name")
     credhub_user_password=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/creds.yml" --path="/credhub_cli_password")
@@ -33,67 +31,56 @@ function credHub_login {
     credhub login -u credhub-cli -p "${credhub_user_password}" -s "${credhub_api_url}" --ca-cert "${tmp_credhub_ca_file}" --ca-cert "${tmp_uaa_ca_file}"
 }
 
-GIT_KUBO_DEPLOYMENT_DIR=$1
-DEPLOYMENT_NAME=$2
-KUBO_ENVIRONMENT_DIR=$3
+setup_env_variables() {
+  TLS_KUBERNETES_CERT=$(bosh-cli int <(credhub get -n "${director_name}/${DEPLOYMENT_NAME}/tls-kubernetes" --output-json) --path='/value/certificate')
+  TLS_KUBERNETES_PRIVATE_KEY=$(bosh-cli int <(credhub get -n "${director_name}/${DEPLOYMENT_NAME}/tls-kubernetes" --output-json) --path='/value/private_key')
+  export TLS_KUBERNETES_CERT TLS_KUBERNETES_PRIVATE_KEY
+}
 
-credHub_login
+setup_env_dir() {
+  cp "$PWD/gcs-bosh-creds/creds.yml" "${KUBO_ENVIRONMENT_DIR}/"
+  cp "kubo-lock/metadata" "${KUBO_ENVIRONMENT_DIR}/director.yml"
+  cp "git-kubo-ci/specs/guestbook.yml" "${KUBO_ENVIRONMENT_DIR}/addons.yml"
+}
 
-if [ -z "${SKIP_KUBECONFIG+1}" ]; then
-  "$GIT_KUBO_DEPLOYMENT_DIR/bin/set_kubeconfig" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}"
-fi
+set_kubeconfig() {
+  "$PWD/git-kubo-deployment/bin/set_kubeconfig" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}"
+}
 
-routing_mode=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/routing_mode")
-iaas=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/iaas")
-director_name=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/director_name")
-GIT_KUBO_CI=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
-GOPATH="$GIT_KUBO_CI"
-INTEGRATIONTEST_IAAS=${iaas}
+generate_testconfig() {
+  "$GIT_KUBO_CI/scripts/generate-test-config.sh" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}"
+}
 
-export GOPATH INTEGRATIONTEST_IAAS DEPLOYMENT_NAME
+main() {
+  setup_env_dir
+  credHub_login
+  setup_env_variables
+  set_kubeconfig
+  generate_testconfig > "$PWD"/testconfig.json
 
-export PATH_TO_KUBECONFIG="$HOME/.kube/config"
-TLS_KUBERNETES_CERT=$(bosh-cli int <(credhub get -n "${director_name}/${DEPLOYMENT_NAME}/tls-kubernetes" --output-json) --path='/value/certificate')
-TLS_KUBERNETES_PRIVATE_KEY=$(bosh-cli int <(credhub get -n "${director_name}/${DEPLOYMENT_NAME}/tls-kubernetes" --output-json) --path='/value/private_key')
-export TLS_KUBERNETES_CERT TLS_KUBERNETES_PRIVATE_KEY
+  export CONFIG="$PWD"/testconfig.json
 
-BOSH_ENVIRONMENT=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path='/internal_ip')
-BOSH_CA_CERT=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/creds.yml" --path='/default_ca/ca')
-BOSH_CLIENT=bosh_admin
-BOSH_CLIENT_SECRET=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/creds.yml" --path='/bosh_admin_client_secret')
+  if [[ ${routing_mode} == "cf" ]]; then
+    ginkgo -progress -v "$GOPATH/src/tests/integration-tests/cloudfoundry"
+  elif [[ ${routing_mode} == "iaas" ]]; then
+    case "${iaas}" in
+      aws)
+        aws configure set aws_access_key_id "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/access_key_id)"
+        aws configure set aws_secret_access_key  "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/secret_access_key)"
+        aws configure set default.region "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/region)"
+        AWS_INGRESS_GROUP_ID=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/default_security_groups/0)
+        export AWS_INGRESS_GROUP_ID
+        ;;
+    esac
+    ginkgo -progress -v "$GOPATH/src/tests/integration-tests/workload/k8s_lbs"
+  fi
+  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/pod_logs"
+  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/generic"
+  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/oss_only"
+  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/api_extensions"
+  if [[ "${iaas}" != "openstack" ]]; then
+      ginkgo -progress -v "$GOPATH/src/tests/integration-tests/persistent_volume"
+  fi
+}
 
-export BOSH_ENVIRONMENT BOSH_CA_CERT BOSH_CLIENT BOSH_CLIENT_SECRET
-
-if [[ ${routing_mode} == "cf" ]]; then
-  KUBERNETES_SERVICE_HOST=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/kubernetes_master_host")
-  KUBERNETES_SERVICE_PORT=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/kubernetes_master_port")
-  WORKLOAD_TCP_PORT=$(expr "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/kubernetes_master_port")" + 10)
-  INGRESS_CONTROLLER_TCP_PORT=$(expr "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/kubernetes_master_port")" + 20)
-  TCP_ROUTER_DNS_NAME=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/kubernetes_master_host")
-  CF_APPS_DOMAIN=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/routing_cf_app_domain_name")
-  KUBERNETES_AUTHENTICATION_POLICY=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/authorization_mode")
-  export KUBERNETES_SERVICE_HOST KUBERNETES_SERVICE_PORT WORKLOAD_TCP_PORT INGRESS_CONTROLLER_TCP_PORT TCP_ROUTER_DNS_NAME CF_APPS_DOMAIN KUBERNETES_AUTHENTICATION_POLICY
-
-  kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/cloudfoundry"
-elif [[ ${routing_mode} == "iaas" ]]; then
-
-  case "${iaas}" in
-    aws)
-      aws configure set aws_access_key_id "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/access_key_id)"
-      aws configure set aws_secret_access_key  "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/secret_access_key)"
-      aws configure set default.region "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/region)"
-      AWS_INGRESS_GROUP_ID=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/default_security_groups/0)
-      export AWS_INGRESS_GROUP_ID
-      ;;
-  esac
-
-  kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/workload/k8s_lbs"
-fi
-kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/pod_logs"
-kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/generic"
-kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/oss_only"
-kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/api_extensions"
-
-if [[ "${iaas}" != "openstack" ]]; then
-    kubo::tests::run_test_suite "$GOPATH/src/tests/integration-tests/persistent_volume"
-fi
+main

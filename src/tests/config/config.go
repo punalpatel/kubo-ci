@@ -36,9 +36,10 @@ type Cf struct {
 }
 
 type Kubernetes struct {
-	MasterHost       string `json:"master_host"`
-	MasterPort       int    `json:"master_port"`
-	PathToKubeConfig string `json:"path_to_kube_config"`
+	AuthorizationMode string `json:"authorization_mode"`
+	MasterHost        string `json:"master_host"`
+	MasterPort        int    `json:"master_port"`
+	PathToKubeConfig  string `json:"path_to_kube_config"`
 }
 
 func InitConfig() (*Config, error) {

@@ -40,11 +40,12 @@ generate_test_config() {
     "ca_cert": $(bosh int $creds_yml --path=/turbulence_api_ca/ca --json | jq .Blocks[0])
   },
   "cf": {
-    "apps_domain": "$(bosh int $director_yml --path=/routing_cf_app_domain_name)"
+    "apps_domain": "$(bosh int $director_yml --path=/routing_cf_app_domain_name 2>/dev/null)"
   },
   "kubernetes": {
+    "authorization_mode": "$(bosh-cli int $director_yml --path=/authorization_mode)",
     "master_host": "$(bosh int $director_yml --path=/kubernetes_master_host)",
-    "master_post": "$(bosh int $director_yml --path=/kubernetes_master_port)",
+    "master_port": $(bosh int $director_yml --path=/kubernetes_master_port),
     "path_to_kube_config": "$HOME/.kube/config"
   }
 }
