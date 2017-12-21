@@ -13,9 +13,9 @@ export BOSH_LOG_PATH="$PWD"/bosh.log
 export GOPATH="$GIT_KUBO_CI"
 export DEPLOYMENT_NAME=${DEPLOYMENT_NAME:="ci-service"}
 
-iaas=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/iaas")
-routing_mode=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/routing_mode")
-director_name=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/director_name")
+iaas=$(bosh-cli int "$PWD/kubo-lock/metadata" --path="/iaas")
+routing_mode=$(bosh-cli int "$PWD/kubo-lock/metadata" --path="/routing_mode")
+director_name=$(bosh-cli int "$PWD/kubo-lock/metadata" --path="/director_name")
 
 credHub_login() {
     local director_name credhub_user_password credhub_api_url
