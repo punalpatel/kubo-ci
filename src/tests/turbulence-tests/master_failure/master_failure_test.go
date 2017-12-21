@@ -15,9 +15,9 @@ import (
 var _ = Describe("A single master and etcd failure", func() {
 
 	var testconfig *config.Config
-	var err error
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})

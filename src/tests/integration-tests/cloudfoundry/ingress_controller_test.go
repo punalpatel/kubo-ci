@@ -22,10 +22,10 @@ var _ = Describe("Testing Ingress Controller", func() {
 		kubectl       *KubectlRunner
 		hasPassed     bool
 		testconfig    *config.Config
-		err           error
 	)
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})

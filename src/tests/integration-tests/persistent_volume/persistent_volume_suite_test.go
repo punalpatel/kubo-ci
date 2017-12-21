@@ -1,11 +1,12 @@
 package persistent_volume_test
 
 import (
+	"tests/config"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"fmt"
-	"os"
 	"testing"
 )
 
@@ -18,9 +19,10 @@ func TestPersistentVolume(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	iaas = os.Getenv("INTEGRATIONTEST_IAAS")
-	deploymentName = os.Getenv("DEPLOYMENT_NAME")
+	testconfig, err := config.InitConfig()
+	Expect(err).NotTo(HaveOccurred())
+
 	platforms := []string{"aws", "gcp", "vsphere"}
 	message := fmt.Sprintf("Expected IAAS to be one of the following values: %#v", platforms)
-	Expect(platforms).To(ContainElement(iaas), message)
+	Expect(platforms).To(ContainElement(testconfig.Bosh.Iaas), message)
 })

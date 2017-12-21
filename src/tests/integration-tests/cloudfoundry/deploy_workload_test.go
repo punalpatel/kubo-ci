@@ -20,10 +20,10 @@ var _ = Describe("Deploy workload", func() {
 		nginxSpec  = PathFromRoot("specs/nginx.yml")
 		kubectl    *KubectlRunner
 		testconfig *config.Config
-		err        error
 	)
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})

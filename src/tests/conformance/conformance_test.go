@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"tests/config"
 	. "tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -22,12 +23,21 @@ type Manifest struct {
 }
 
 var _ = Describe("Conformance Tests", func() {
-	var conformanceSpec string
-	var kubectl *KubectlRunner
+	var (
+		conformanceSpec string
+		kubectl         *KubectlRunner
+		testconfig      *config.Config
+	)
+
+	BeforeSuite(func() {
+		var err error
+		testconfig, err = config.InitConfig()
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		conformanceSpec = GetLatestConformanceSpec()
-		kubectl = NewKubectlRunner()
+		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 	})
 
 	AfterEach(func() {

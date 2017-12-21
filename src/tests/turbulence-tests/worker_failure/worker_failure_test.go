@@ -14,19 +14,23 @@ import (
 )
 
 var _ = Describe("Worker failure scenarios", func() {
-	var deployment director.Deployment
-	var countRunningWorkers func() int
-	var kubectl *KubectlRunner
-	var nginxSpec = PathFromRoot("specs/nginx.yml")
-	var testconfig *config.Config
-	var err error
+
+	var (
+		deployment          director.Deployment
+		countRunningWorkers func() int
+		kubectl             *KubectlRunner
+		nginxSpec           = PathFromRoot("specs/nginx.yml")
+		testconfig          *config.Config
+	)
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	BeforeEach(func() {
+		var err error
 		director := NewDirector(testconfig.Bosh)
 		deployment, err = director.FindDeployment("ci-service")
 		Expect(err).NotTo(HaveOccurred())

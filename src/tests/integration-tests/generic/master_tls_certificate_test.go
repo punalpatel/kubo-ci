@@ -16,10 +16,10 @@ var _ = Describe("MasterTlsCertificate", func() {
 	var (
 		kubectl    *KubectlRunner
 		testconfig *config.Config
-		err        error
 	)
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})

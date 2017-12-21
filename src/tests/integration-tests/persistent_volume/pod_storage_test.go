@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"tests/config"
 	. "tests/test_helpers"
 
 	"github.com/onsi/gomega/gexec"
@@ -16,17 +17,25 @@ import (
 
 var _ = Describe("Guestbook storage", func() {
 
-	var deployment director.Deployment
-	var kubectl *KubectlRunner
+	var (
+		deployment director.Deployment
+		kubectl    *KubectlRunner
+		testconfig *config.Config
+	)
+
+	BeforeSuite(func() {
+		var err error
+		testconfig, err = config.InitConfig()
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		var err error
-
-		director := NewDirector()
+		director := NewDirector(testconfig.Bosh)
 		deployment, err = director.FindDeployment(deploymentName)
 		Expect(err).NotTo(HaveOccurred())
 
-		kubectl = NewKubectlRunner()
+		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 		kubectl.CreateNamespace()
 
 		storageClassSpec := PathFromRoot(fmt.Sprintf("specs/storage-class-%s.yml", iaas))

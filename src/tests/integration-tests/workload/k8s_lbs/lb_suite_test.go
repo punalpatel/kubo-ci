@@ -1,9 +1,10 @@
 package k8s_lbs_test
 
 import (
-	"tests/test_helpers"
-	"testing"
 	"os"
+	"testing"
+	"tests/config"
+	"tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,10 +19,15 @@ var (
 	runner      *test_helpers.KubectlRunner
 	nginxLBSpec = test_helpers.PathFromRoot("specs/nginx-lb.yml")
 	iaas        = os.Getenv("INTEGRATIONTEST_IAAS")
+	testconfig  *config.Config
 )
 
 var _ = BeforeSuite(func() {
-	runner = test_helpers.NewKubectlRunner()
+	var err error
+	testconfig, err = config.InitConfig()
+	Expect(err).NotTo(HaveOccurred())
+
+	runner = test_helpers.NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 	runner.RunKubectlCommand("create", "namespace", runner.Namespace()).Wait("60s")
 })
 

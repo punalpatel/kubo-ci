@@ -21,18 +21,21 @@ import (
 
 var _ = Describe("Persistence failure scenarios", func() {
 
-	var deployment director.Deployment
-	var countRunningWorkers func() int
-	var kubectl *KubectlRunner
-	var testconfig *config.Config
-	var err error
+	var (
+		deployment          director.Deployment
+		countRunningWorkers func() int
+		kubectl             *KubectlRunner
+		testconfig          *config.Config
+	)
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	BeforeEach(func() {
+		var err error
 		director := NewDirector(testconfig.Bosh)
 		deployment, err = director.FindDeployment(testconfig.Bosh.Deployment)
 		Expect(err).NotTo(HaveOccurred())

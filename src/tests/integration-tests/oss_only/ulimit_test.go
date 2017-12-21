@@ -1,6 +1,7 @@
 package oss_only_test
 
 import (
+	"tests/config"
 	"tests/test_helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -9,11 +10,18 @@ import (
 
 var _ = Describe("Kubectl", func() {
 	var (
-		runner *test_helpers.KubectlRunner
+		runner     *test_helpers.KubectlRunner
+		testconfig *config.Config
 	)
 
+	BeforeSuite(func() {
+		var err error
+		testconfig, err = config.InitConfig()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	BeforeEach(func() {
-		runner = test_helpers.NewKubectlRunner()
+		runner = test_helpers.NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 		runner.RunKubectlCommand(
 			"create", "namespace", runner.Namespace()).Wait("60s")
 	})

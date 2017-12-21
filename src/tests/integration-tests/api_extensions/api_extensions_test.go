@@ -44,7 +44,6 @@ var _ = Describe("Api Extensions", func() {
 		serviceSpec               string
 		apiServiceSpec            string
 		testconfig                *config.Config
-		err                       error
 	)
 
 	templateNamespaceIntoFile := func(tmpDir, path, namespace string) string {
@@ -62,6 +61,7 @@ var _ = Describe("Api Extensions", func() {
 	}
 
 	BeforeSuite(func() {
+		var err error
 		testconfig, err = config.InitConfig()
 		Expect(err).NotTo(HaveOccurred())
 	})
