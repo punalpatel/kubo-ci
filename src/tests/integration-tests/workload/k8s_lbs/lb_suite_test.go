@@ -1,7 +1,6 @@
 package k8s_lbs_test
 
 import (
-	"os"
 	"testing"
 	"tests/config"
 	"tests/test_helpers"
@@ -18,7 +17,6 @@ func TestK8sLb(t *testing.T) {
 var (
 	runner      *test_helpers.KubectlRunner
 	nginxLBSpec = test_helpers.PathFromRoot("specs/nginx-lb.yml")
-	iaas        = os.Getenv("INTEGRATIONTEST_IAAS")
 	testconfig  *config.Config
 )
 
