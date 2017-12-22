@@ -1,7 +1,6 @@
 package cloudfoundry_test
 
 import (
-	"os"
 	"strconv"
 	"strings"
 	"tests/config"
@@ -48,13 +47,13 @@ func InitializeIngressTestConfig(runner *test_helpers.KubectlRunner, testconfig 
 	if tc.kubernetesServicePort == "" {
 		Fail("Correct Kubernetes Master Port must be set in test config")
 	}
-	tc.tlsKubernetesCert = os.Getenv("TLS_KUBERNETES_CERT")
+	tc.tlsKubernetesCert = testconfig.TLSCert
 	if tc.tlsKubernetesCert == "" {
-		Fail("Correct TLS_KUBERNETES_CERT has to be set")
+		Fail("Correct Kubernetes TLS Certificate must be set in test config")
 	}
-	tc.tlsKubernetesPrivateKey = os.Getenv("TLS_KUBERNETES_PRIVATE_KEY")
+	tc.tlsKubernetesPrivateKey = testconfig.TLSPrivateKey
 	if tc.tlsKubernetesPrivateKey == "" {
-		Fail("Correct TLS_KUBERNETES_PRIVATE_KEY has to be set")
+		Fail("Correct Kubernetes TLS Private Key must be set in test config")
 	}
 	tc.authorizationMode = strings.ToUpper(testconfig.AuthorizationMode)
 	if tc.authorizationMode != rbac && tc.authorizationMode != abac {

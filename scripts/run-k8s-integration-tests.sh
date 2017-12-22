@@ -5,60 +5,47 @@
 set -eu
 set -o pipefail
 
-source "$PWD/git-kubo-ci/scripts/lib/environment.sh"
+BASE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 
-GIT_KUBO_CI=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
-export BOSH_LOG_LEVEL=debug
-export BOSH_LOG_PATH="$PWD"/bosh.log
-export GOPATH="$GIT_KUBO_CI"
-export DEPLOYMENT_NAME=${DEPLOYMENT_NAME:="ci-service"}
+verify_args() {
+  set +e # Cant be set since read returns a non-zero when it reaches EOF
+  read -r -d '' usage <<-EOF
+	Usage: $(basename "$0") [-h] environment deployment-name
+	
+	Help Options:
+		-h  show this help text
+	EOF
+  set -e
 
-iaas=$(bosh-cli int "$PWD/kubo-lock/metadata" --path="/iaas")
-routing_mode=$(bosh-cli int "$PWD/kubo-lock/metadata" --path="/routing_mode")
-director_name=$(bosh-cli int "$PWD/kubo-lock/metadata" --path="/director_name")
-
-credHub_login() {
-    local director_name credhub_user_password credhub_api_url
-    director_name=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/director_name")
-    credhub_user_password=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/creds.yml" --path="/credhub_cli_password")
-    credhub_api_url="https://$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path="/internal_ip"):8844"
-
-    tmp_uaa_ca_file="$(mktemp)"
-    bosh-cli int "${KUBO_ENVIRONMENT_DIR}/creds.yml" --path="/uaa_ssl/ca" > "${tmp_uaa_ca_file}"
-    tmp_credhub_ca_file="$(mktemp)"
-    bosh-cli int "${KUBO_ENVIRONMENT_DIR}/creds.yml" --path="/credhub_tls/ca" > "${tmp_credhub_ca_file}"
-
-    credhub login -u credhub-cli -p "${credhub_user_password}" -s "${credhub_api_url}" --ca-cert "${tmp_credhub_ca_file}" --ca-cert "${tmp_uaa_ca_file}"
+  while getopts ':h:' option; do
+    case "$option" in
+      h) echo "$usage"
+         exit 0
+         ;;
+     \?) printf "Illegal option: -%s\n" "$OPTARG" >&2
+         echo "$usage" >&2
+         exit 64
+         ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+  if [[ $# -lt 2 ]]; then
+    echo "$usage" >&2
+    exit 64
+  fi
 }
 
-setup_env_variables() {
-  TLS_KUBERNETES_CERT=$(bosh-cli int <(credhub get -n "${director_name}/${DEPLOYMENT_NAME}/tls-kubernetes" --output-json) --path='/value/certificate')
-  TLS_KUBERNETES_PRIVATE_KEY=$(bosh-cli int <(credhub get -n "${director_name}/${DEPLOYMENT_NAME}/tls-kubernetes" --output-json) --path='/value/private_key')
-  export TLS_KUBERNETES_CERT TLS_KUBERNETES_PRIVATE_KEY
-}
+run_tests() {
+  local environment="$1"
+  local deployment="$2"
 
-setup_env_dir() {
-  cp "$PWD/gcs-bosh-creds/creds.yml" "${KUBO_ENVIRONMENT_DIR}/"
-  cp "kubo-lock/metadata" "${KUBO_ENVIRONMENT_DIR}/director.yml"
-  cp "git-kubo-ci/specs/guestbook.yml" "${KUBO_ENVIRONMENT_DIR}/addons.yml"
-}
+  local iaas=$(bosh-cli int "$environment/director.yml" --path='/iaas')
+  local routing_mode=$(bosh-cli int "$environment/director.yml" --path='/routing_mode')
+  local director_name=$(bosh-cli int "$environment/director.yml" --path='/director_name')
 
-set_kubeconfig() {
-  "$PWD/git-kubo-deployment/bin/set_kubeconfig" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}"
-}
-
-generate_testconfig() {
-  "$GIT_KUBO_CI/scripts/generate-test-config.sh" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}"
-}
-
-main() {
-  setup_env_dir
-  credHub_login
-  setup_env_variables
-  set_kubeconfig
-  generate_testconfig > "$PWD"/testconfig.json
-
-  export CONFIG="$PWD"/testconfig.json
+  local tmpfile=$(mktemp)
+  $BASE_DIR/scripts/generate-test-config.sh $environment $deployment > $tmpfile
+  export CONFIG=$tmpfile
 
   if [[ ${routing_mode} == "cf" ]]; then
     ginkgo -progress -v "$GOPATH/src/tests/integration-tests/cloudfoundry"
@@ -74,13 +61,22 @@ main() {
     esac
     ginkgo -progress -v "$GOPATH/src/tests/integration-tests/workload/k8s_lbs"
   fi
+
   ginkgo -progress -v "$GOPATH/src/tests/integration-tests/pod_logs"
   ginkgo -progress -v "$GOPATH/src/tests/integration-tests/generic"
   ginkgo -progress -v "$GOPATH/src/tests/integration-tests/oss_only"
   ginkgo -progress -v "$GOPATH/src/tests/integration-tests/api_extensions"
+
   if [[ "${iaas}" != "openstack" ]]; then
       ginkgo -progress -v "$GOPATH/src/tests/integration-tests/persistent_volume"
   fi
+
+  return 0
 }
 
-main
+main() {
+  verify_args "$@"
+  run_tests "$@"
+}
+
+main "$@"
