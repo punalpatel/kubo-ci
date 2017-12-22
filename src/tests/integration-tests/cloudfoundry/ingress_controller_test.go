@@ -65,8 +65,8 @@ var _ = Describe("Testing Ingress Controller", func() {
 		ingressConfig.deleteIngressController()
 
 		Eventually(kubectl.RunKubectlCommand("delete", "-f", ingressConfig.ingressSpec), "60s").Should(gexec.Exit())
-		Eventually(kubectl.RunKubectlCommand("delete", "secret", "tls-kubernetes")).Should(gexec.Exit())
-		Eventually(kubectl.RunKubectlCommand("delete", "secret", "kubernetes-service")).Should(gexec.Exit())
+		Eventually(kubectl.RunKubectlCommand("delete", "secret", "tls-kubernetes"), "60s").Should(gexec.Exit())
+		Eventually(kubectl.RunKubectlCommand("delete", "secret", "kubernetes-service"), "60s").Should(gexec.Exit())
 		Eventually(kubectl.RunKubectlCommand("delete", "namespace", kubectl.Namespace()), "60s").Should(gexec.Exit())
 	})
 
