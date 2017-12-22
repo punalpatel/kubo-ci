@@ -3,6 +3,7 @@ package cloudfoundry_test
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	. "tests/test_helpers"
@@ -25,7 +26,7 @@ var _ = Describe("Deploy workload", func() {
 			Fail("Please ensure k8s master port is defined in the test config")
 		}
 
-		tcpPort = string(testconfig.Kubernetes.MasterPort + 10)
+		tcpPort = strconv.Itoa(testconfig.Kubernetes.MasterPort + 10)
 
 		kubectl = NewKubectlRunner(testconfig.Kubernetes.PathToKubeConfig)
 		kubectl.RunKubectlCommand(
@@ -68,7 +69,7 @@ var _ = Describe("Deploy workload", func() {
 		}, "120s", "5s").Should(Equal(200))
 
 		By("exposing it via TCP")
-		appUrl = fmt.Sprintf("http://%s:%s", testconfig.Kubernetes.MasterHost, testconfig.Kubernetes.MasterPort)
+		appUrl = fmt.Sprintf("http://%s:%s", testconfig.Kubernetes.MasterHost, tcpPort)
 
 		result, err = httpClient.Get(appUrl)
 		Expect(err).To(HaveOccurred())
