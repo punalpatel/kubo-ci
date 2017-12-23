@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	yaml "gopkg.in/yaml.v2"
 )
 
 type Manifest struct {
