@@ -169,6 +169,7 @@ jobs:
     input_mapping: {kubo-lock: kubo-lock-<%= iaas %>-<%= network %>}
     params:
       CONFORMANCE_RESULTS_DIR: conformance-results
+      DEBUG: 1
     ensure:
       put: conformance-results
       params:
