@@ -22,3 +22,5 @@ main() {
   setup_env
   "$BASE_DIR/scripts/run-k8s-turbulence-tests.sh" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}"
 }
+
+main "$@"
