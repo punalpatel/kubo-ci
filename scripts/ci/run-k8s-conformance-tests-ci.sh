@@ -29,7 +29,7 @@ bosh_login() {
 main() {
   setup_env
   bosh_login
-  "$BASE_DIR/scripts/run-k8s-conformance-tests.sh" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}" "${CONFORMANCE_RESULTS_DIR}"
+  "$BASE_DIR/scripts/run-k8s-conformance-tests.sh" "${KUBO_ENVIRONMENT_DIR}" "${DEPLOYMENT_NAME}" "${PWD}/${CONFORMANCE_RESULTS_DIR}"
 }
 
 main "$@"

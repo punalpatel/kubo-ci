@@ -83,6 +83,7 @@ var _ = Describe("Conformance Tests", func() {
 
 		By("Move results to output dir")
 		conformanceResultsDir := os.Getenv("CONFORMANCE_RESULTS_DIR")
+		fmt.Println(fmt.Sprintf("conformance results dir: %s", conformanceResultsDir))
 		conformanceResultsPath := filepath.Join(conformanceResultsDir, fmt.Sprintf("conformance-results-%s.tar.gz", releaseVersion))
 		containerAddressedLogPath := fmt.Sprintf("sonobuoy:%s", logPath)
 		session = kubectl.RunKubectlCommandInNamespace("sonobuoy", "cp", containerAddressedLogPath, conformanceResultsPath)
