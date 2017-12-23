@@ -48,27 +48,27 @@ run_tests() {
   export CONFIG=$tmpfile
 
   if [[ ${routing_mode} == "cf" ]]; then
-    ginkgo -progress -v "$GOPATH/src/tests/integration-tests/cloudfoundry"
+    ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/cloudfoundry"
   elif [[ ${routing_mode} == "iaas" ]]; then
     case "${iaas}" in
       aws)
-        aws configure set aws_access_key_id "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/access_key_id)"
-        aws configure set aws_secret_access_key  "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/secret_access_key)"
-        aws configure set default.region "$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/region)"
-        AWS_INGRESS_GROUP_ID=$(bosh-cli int "${KUBO_ENVIRONMENT_DIR}/director.yml" --path=/default_security_groups/0)
+        aws configure set aws_access_key_id "$(bosh-cli int "${environment}/director.yml" --path=/access_key_id)"
+        aws configure set aws_secret_access_key  "$(bosh-cli int "${environment}/director.yml" --path=/secret_access_key)"
+        aws configure set default.region "$(bosh-cli int "${environment}/director.yml" --path=/region)"
+        AWS_INGRESS_GROUP_ID=$(bosh-cli int "${environment}/director.yml" --path=/default_security_groups/0)
         export AWS_INGRESS_GROUP_ID
         ;;
     esac
-    ginkgo -progress -v "$GOPATH/src/tests/integration-tests/workload/k8s_lbs"
+    ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/workload/k8s_lbs"
   fi
 
-  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/pod_logs"
-  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/generic"
-  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/oss_only"
-  ginkgo -progress -v "$GOPATH/src/tests/integration-tests/api_extensions"
+  ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/pod_logs"
+  ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/generic"
+  ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/oss_only"
+  ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/api_extensions"
 
   if [[ "${iaas}" != "openstack" ]]; then
-      ginkgo -progress -v "$GOPATH/src/tests/integration-tests/persistent_volume"
+      ginkgo -progress -v "$BASE_DIR/src/tests/integration-tests/persistent_volume"
   fi
 
   return 0

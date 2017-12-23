@@ -62,7 +62,7 @@ run_tests() {
 
   export CONFORMANCE_RESULTS_DIR="$results_dir"
   export CONFORMANCE_RELEASE_VERSION="$release_version"
-  ginkgo -progress -v "$GOPATH/src/tests/conformance"
+  ginkgo -progress -v "$BASE_DIR/src/tests/conformance"
 
   return 0
 }
