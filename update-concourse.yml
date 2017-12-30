@@ -1,6 +1,6 @@
 ---
 pins:
-  - &CONCOURSE_VERSION {version: 3.5.0}
+  - &CONCOURSE_VERSION {version: 3.6.0}
   - &GARDEN_RUNC_VERSION {version: 1.6.0}
   - &STEMCELL_VERSION {version: "3445.11"}
 resource_types:
