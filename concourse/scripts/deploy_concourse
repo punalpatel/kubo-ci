@@ -25,7 +25,7 @@ deploy() {
 
 
   if [ -z "$(bosh-cli stemcells | grep trusty)" ]; then
-    local stemcell_version=3468.11
+    local stemcell_version=3468.13
     local iaas_extension=
     case ${IAAS} in
     vsphere)
