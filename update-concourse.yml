@@ -2,7 +2,7 @@
 pins:
   - &CONCOURSE_VERSION {version: 3.6.0}
   - &GARDEN_RUNC_VERSION {version: 1.6.0}
-  - &STEMCELL_VERSION {version: "3445.11"}
+  - &STEMCELL_VERSION {version: "3468.13"}
 resource_types:
   - name: bosh-deployment
     type: docker-image
